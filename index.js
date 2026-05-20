@@ -8,8 +8,8 @@ const app = express();
 dotenv.config();
 
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(process.cwd(), 'views'));
+// EJS views disabled (this project runs as an API; avoids Render failing when `views/` isn't present).
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
@@ -49,26 +49,19 @@ app.use('/api/v1', productRoutes);
 let User = 'luqman';
 let gender = 'male';
 
-const cars = [
-    { name: 'BMW', price: 50000, year: 2023, color: 'black' },
-    { name: 'Audi', price: 60000, year: 2022, color: 'white' },
-    { name: 'Mercedes', price: 70000, year: 2023, color: 'silver' },
-    { name: 'Toyota', price: 35000, year: 2021, color: 'blue' },
-    { name: 'Honda', price: 40000, year: 2022, color: 'red' },
-    { name: 'Tesla', price: 80000, year: 2023, color: 'white' }
-];
+// NOTE:
+// This backend is primarily an API under /api/v1.
+// Removed EJS-rendered routes so Render deployments don’t fail when `views/` is not present.
 
-app.get('/', (req, res) => {
-    res.render('index', { User, gender, cars });
+// API health check (Render-safe, no template rendering)
+app.get("/", (req, res) => {
+  res.json({ message: "Backend is running successfully" });
 });
 
 app.get('/Users', (req, res) => {
-    res.redirect('/');
+    res.status(301).json({ message: "Use /api/v1 endpoints" });
 });
 
-app.get('/index', (req, res) => {
-    res.render('index', { User, gender, cars });
-});
 
 // Note: legacy EJS demo routes removed.
 // This backend is primarily an API under /api/v1.
@@ -87,6 +80,30 @@ app.use((req, res) => {
   });
 });
 
+// Guard: this backend is API-only.
+// If any leftover route/middleware attempts EJS rendering, prevent crashes on Render
+// (Render deployments often don't include a /views directory).
+app.use((req, res, next) => {
+  if (typeof res.render === 'function') {
+    const originalRender = res.render.bind(res);
+    res.render = (...args) => {
+      const [viewName, viewData] = args;
+      console.error('[api-only] Attempted res.render()', {
+        view: viewName,
+        hasViewData: !!viewData,
+        stack: new Error().stack,
+      });
+      return res.status(500).json({
+        message: 'API-only backend: view rendering not supported',
+        attemptedView: viewName,
+      });
+    };
+    // keep originalRender accessible if needed
+    res.render.__original = originalRender;
+  }
+  next();
+});
+
 // JSON error handler
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
@@ -96,6 +113,7 @@ app.use((err, req, res, next) => {
     error: err?.message || String(err),
   });
 });
+
 
 
 const PORT = process.env.PORT || 3000;
