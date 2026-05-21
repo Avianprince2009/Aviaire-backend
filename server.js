@@ -9,6 +9,7 @@ import mongoose from 'mongoose'
 import { sendOtpMail } from './mailer.js'
 import User from './models/User.js'
 import Otp from './models/Otp.js'
+import Product from './models/Product.js'
 
 dotenv.config()
 
@@ -89,9 +90,48 @@ app.post('/api/v1/forgot-password', forgotLimiter, async (req, res, next) => {
     }
 
     // send OTP via email (nodemailer)
-    const subject = 'Your password reset code'
-    const text = `Your Aviaire password reset code is: ${otp}. It expires in ${expiresMin} minutes.`
-    await sendOtpMail({ to: email, subject, text })
+    const subject = 'Your L\'ALLURE password reset code'
+    const text = `Your L'ALLURE password reset code is: ${otp}. It expires in ${expiresMin} minutes.`
+    const html = `
+      <html>
+        <body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,Helvetica,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+              <td align="center" style="padding:24px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 0 24px rgba(0,0,0,0.08);">
+                  <tr>
+                    <td style="padding:24px 32px 0;text-align:center;">
+                      <h1 style="margin:0;font-family:'Cinzel',serif;font-size:32px;color:#111;">L'ALLURE</h1>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 32px 8px;color:#444;font-size:16px;line-height:1.6;">
+                      <p style="margin:0 0 16px;">Hello,</p>
+                      <p style="margin:0 0 24px;">You requested a password reset. Use the code below to continue. This code expires in ${expiresMin} minutes.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding:0 32px 32px;">
+                      <div style="display:inline-block;padding:18px 28px;background:#111;color:#fff;font-size:24px;font-weight:700;letter-spacing:4px;border-radius:12px;">${otp}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 32px 24px;color:#777;font-size:14px;line-height:1.6;">
+                      <p style="margin:0;">If you did not request a reset, please ignore this email. For security, do not share this code with anyone.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 32px 32px;color:#999;font-size:12px;text-align:center;">
+                      <p style="margin:0;">L'ALLURE • Elegant watches & fine collections</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>`
+    await sendOtpMail({ to: email, subject, text, html })
 
     // always return 200 to avoid user enumeration
     return res.json({ message: 'If the email exists, an OTP has been sent' })
@@ -135,6 +175,49 @@ app.post('/api/v1/reset-password', async (req, res, next) => {
     await Otp.deleteOne({ _id: doc._id })
 
     return res.json({ message: 'Password updated' })
+  } catch (e) {
+    next(e)
+  }
+})
+
+// Products CRUD
+app.get('/api/v1/products', async (req, res, next) => {
+  try {
+    const products = await Product.find({}).sort({ createdAt: -1 }).lean()
+    return res.json({ data: products })
+  } catch (e) {
+    next(e)
+  }
+})
+
+app.post('/api/v1/products', async (req, res, next) => {
+  try {
+    const { name, collection, price, imageUrl, description } = req.body || {}
+    if (!name || !collection || price === undefined) return res.status(400).json({ message: 'Missing fields' })
+    const prod = await Product.create({ name, collection, price: Number(price), imageUrl, description })
+    return res.status(201).json({ data: prod })
+  } catch (e) {
+    next(e)
+  }
+})
+
+app.put('/api/v1/products/:id', async (req, res, next) => {
+  try {
+    const id = req.params.id
+    const { name, collection, price, imageUrl, description } = req.body || {}
+    const updated = await Product.findByIdAndUpdate(id, { name, collection, price: Number(price), imageUrl, description }, { new: true, runValidators: true })
+    if (!updated) return res.status(404).json({ message: 'Not found' })
+    return res.json({ data: updated })
+  } catch (e) {
+    next(e)
+  }
+})
+
+app.delete('/api/v1/products/:id', async (req, res, next) => {
+  try {
+    const id = req.params.id
+    await Product.findByIdAndDelete(id)
+    return res.json({ message: 'Deleted' })
   } catch (e) {
     next(e)
   }

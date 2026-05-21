@@ -24,12 +24,21 @@ export function getTransporterFromEnv(env) {
 
 export async function sendOtpMail({ to, subject, text, html, env = process.env }) {
   const t = getTransporterFromEnv(env)
+  const fromAddress = env.FROM_EMAIL || env.SMTP_USER || 'no-reply@lallure.com'
+  const fromLabel = `L'ALLURE <${fromAddress}>`
+
   if (!t) {
     // fallback to logging in dev
-    console.log('[mailer] SMTP not configured, OTP message would be:', { to, subject, text })
+    console.log('[mailer] SMTP not configured, OTP message would be:', {
+      from: fromLabel,
+      to,
+      subject,
+      text,
+      html,
+    })
     return { ok: true, logged: true }
   }
 
-  const info = await t.sendMail({ from: env.FROM_EMAIL || env.SMTP_USER, to, subject, text, html })
+  const info = await t.sendMail({ from: fromLabel, to, subject, text, html })
   return { ok: true, info }
 }
