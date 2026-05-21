@@ -15,12 +15,6 @@ dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 3000
-
-app.use(helmet())
-app.use(express.json({ limit: '1mb' }))
-app.use(express.urlencoded({ extended: true }))
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
-
 const DEFAULT_CORS_ORIGINS = [
   'https://aviaire.vercel.app',
   'http://localhost:5173',
@@ -36,32 +30,25 @@ const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGINS || '')
 
 const allowedOrigins = FRONTEND_ORIGINS.length > 0 ? FRONTEND_ORIGINS : DEFAULT_CORS_ORIGINS
 
-app.use(
-  cors({
-    origin: function (origin, cb) {
-      if (!origin) return cb(null, true)
-      if (allowedOrigins.includes(origin)) return cb(null, true)
-      cb(new Error(`Blocked by CORS: ${origin}`))
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: false,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    exposedHeaders: ['X-Request-Id'],
-    optionsSuccessStatus: 200,
-  })
-)
-
-app.options('*', cors({
-  origin: function (origin, cb) {
+const corsOptions = {
+  origin(origin, cb) {
     if (!origin) return cb(null, true)
     if (allowedOrigins.includes(origin)) return cb(null, true)
     cb(new Error(`Blocked by CORS: ${origin}`))
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  exposedHeaders: ['X-Request-Id'],
   credentials: false,
   optionsSuccessStatus: 200,
-}))
+}
+
+app.use(helmet())
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))
+app.use(express.json({ limit: '1mb' }))
+app.use(express.urlencoded({ extended: true }))
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
 app.use((req, res, next) => {
   console.debug('[request]', {
@@ -103,10 +90,25 @@ app.get('/api/v1/health', (req, res) => res.json({ ok: true }))
 // 404
 app.use((req, res) => res.status(404).json({ message: 'Not found' }))
 
-// error handler
+// error handler - keep CORS headers on error responses
 app.use((err, req, res, next) => {
-  console.error(err)
-  res.status(err.status || 500).json({ message: err.message || 'Server error' })
+  console.error('Unhandled server error:', {
+    message: err?.message,
+    stack: err?.stack,
+    params: req.params,
+    body: req.body,
+    origin: req.headers.origin,
+  })
+
+  const requestOrigin = req.headers.origin
+  if (!requestOrigin || allowedOrigins.includes(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin || '*')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,X-Requested-With')
+  }
+
+  const status = err?.status || 500
+  const message = err?.message || 'Server error'
+  res.status(status).json({ message })
 })
 
 app.listen(PORT, () => console.log(`Backend listening on port ${PORT}`))

@@ -13,69 +13,108 @@ const listProducts = async (req, res, next) => {
 
 const createProduct = async (req, res, next) => {
   try {
-    const { name, collection, price, imageUrl, description } = req.body || {};
+    const { name, collection, price, imageUrl, description } = req.body || {}
+    const trimmedName = String(name || '').trim()
+    const trimmedCollection = String(collection || '').trim()
+    const trimmedImageUrl = String(imageUrl || '').trim()
+    const trimmedDescription = String(description || '').trim()
+    const numericPrice = Number(price)
 
-    if (!name?.trim()) return res.status(400).json({ message: 'name is required' });
-    if (!collection?.trim()) return res.status(400).json({ message: 'collection is required' });
-    if (price === undefined || price === null || String(price).trim() === '') return res.status(400).json({ message: 'price is required' });
-    if (!imageUrl?.trim()) return res.status(400).json({ message: 'imageUrl is required' });
+    if (!trimmedName) return res.status(400).json({ message: 'name is required' })
+    if (!trimmedCollection) return res.status(400).json({ message: 'collection is required' })
+    if (price === undefined || price === null || String(price).trim() === '') {
+      return res.status(400).json({ message: 'price is required' })
+    }
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      return res.status(400).json({ message: 'price must be a valid non-negative number' })
+    }
+    if (!trimmedImageUrl) return res.status(400).json({ message: 'imageUrl is required' })
 
     const created = await ProductModel.create({
-      name: name.trim(),
-      collection: collection.trim(),
-      price: Number(price),
-      imageUrl: imageUrl.trim(),
-      description: (description ?? '').trim(),
-    });
+      name: trimmedName,
+      collection: trimmedCollection,
+      price: numericPrice,
+      imageUrl: trimmedImageUrl,
+      description: trimmedDescription,
+    })
 
-    return res.status(201).json({ message: 'Product created', data: created });
+    return res.status(201).json({ message: 'Product created', data: created })
   } catch (error) {
-    console.error('createProduct error:', error);
+    console.error('createProduct error:', {
+      body: req.body,
+      error,
+    })
     if (error.name === 'ValidationError') {
-      return res.status(422).json({ message: 'Validation failed', errors: error.errors });
+      return res.status(422).json({ message: 'Validation failed', errors: error.errors })
     }
-    next(error);
+    next(error)
   }
 };
 
 const updateProduct = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { name, collection, price, imageUrl, description } = req.body || {};
+    const { id } = req.params
+    const { name, collection, price, imageUrl, description } = req.body || {}
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid product id' });
+      return res.status(400).json({ message: 'Invalid product id' })
     }
 
-    const update = {};
-    if (name?.trim()) update.name = name.trim();
-    if (collection?.trim()) update.collection = collection.trim();
-    if (price !== undefined && price !== null && String(price).trim() !== '') update.price = Number(price);
-    if (imageUrl !== undefined) update.imageUrl = String(imageUrl).trim();
-    if (description !== undefined) update.description = String(description).trim();
+    const update = {}
+    if (name !== undefined) {
+      const trimmedName = String(name).trim()
+      if (!trimmedName) {
+        return res.status(400).json({ message: 'name cannot be empty' })
+      }
+      update.name = trimmedName
+    }
+    if (collection !== undefined) {
+      const trimmedCollection = String(collection).trim()
+      if (!trimmedCollection) {
+        return res.status(400).json({ message: 'collection cannot be empty' })
+      }
+      update.collection = trimmedCollection
+    }
+    if (price !== undefined && price !== null && String(price).trim() !== '') {
+      const numericPrice = Number(price)
+      if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+        return res.status(400).json({ message: 'price must be a valid non-negative number' })
+      }
+      update.price = numericPrice
+    }
+    if (imageUrl !== undefined) {
+      const trimmedImageUrl = String(imageUrl).trim()
+      if (!trimmedImageUrl) {
+        return res.status(400).json({ message: 'imageUrl cannot be empty' })
+      }
+      update.imageUrl = trimmedImageUrl
+    }
+    if (description !== undefined) {
+      update.description = String(description).trim()
+    }
 
     if (Object.keys(update).length === 0) {
-      return res.status(400).json({ message: 'At least one field is required to update' });
+      return res.status(400).json({ message: 'At least one field is required to update' })
     }
 
     const updated = await ProductModel.findByIdAndUpdate(id, update, {
       new: true,
       runValidators: true,
       context: 'query',
-    });
+    })
 
-    if (!updated) return res.status(404).json({ message: 'Product not found' });
-    return res.status(200).json({ message: 'Product updated', data: updated });
+    if (!updated) return res.status(404).json({ message: 'Product not found' })
+    return res.status(200).json({ message: 'Product updated', data: updated })
   } catch (error) {
     console.error('updateProduct error:', {
       params: req.params,
       body: req.body,
       error,
-    });
+    })
     if (error.name === 'ValidationError') {
-      return res.status(422).json({ message: 'Validation failed', errors: error.errors });
+      return res.status(422).json({ message: 'Validation failed', errors: error.errors })
     }
-    next(error);
+    next(error)
   }
 };
 
