@@ -129,6 +129,11 @@ app.get("/", (req, res) => {
   });
 });
 
+// Serve OTP reset page
+app.get("/otp-reset", (req, res) => {
+  res.sendFile("otp-reset.html", { root: process.cwd() });
+});
+
 app.get("/api/v1/health", (req, res) => {
   res.json({ ok: true });
 });
