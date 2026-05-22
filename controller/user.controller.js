@@ -40,16 +40,12 @@ const sendMail = async ({ to, subject, text }) => {
 const register = async (req, res) => {
     const { name, email, password, confirmPassword } = req.body;
 
-    if (!name?.trim() || !email?.trim() || !password || !confirmPassword) {
-        return res.status(400).json({ message: "Missing required fields: name, email, password, confirmPassword" });
+    if (!name?.trim() || !email?.trim() || !password) {
+        return res.status(400).json({ message: "Missing required fields: name, email, password" });
     }
 
     if (password.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
-    }
-
-    if (password !== confirmPassword) {
-        return res.status(400).json({ message: "Passwords must match" });
     }
 
     const trimmedEmail = email.trim().toLowerCase();
