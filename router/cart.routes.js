@@ -1,11 +1,11 @@
-const express = require("express");
-const { verifyUser } = require("../controller/user.controller");
-const {
+import express from "express";
+import { verifyUser } from "../controller/user.controller.js";
+import {
   getCart,
   addToCart,
   removeFromCart,
   updateQuantity,
-} = require("../controller/cart.controller");
+} from "../controller/cart.controller.js";
 
 const router = express.Router();
 
@@ -14,5 +14,4 @@ router.post("/cart/add", verifyUser, addToCart);
 router.post("/cart/remove", verifyUser, removeFromCart);
 router.post("/cart/quantity", verifyUser, updateQuantity);
 
-module.exports = router;
-
+export default router;

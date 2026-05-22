@@ -1,4 +1,4 @@
-const ProductModel = require('../models/product.model');
+import ProductModel from '../models/product.model.js';
 
 const SEED_PRODUCTS = [
   {
@@ -35,5 +35,4 @@ async function seedProductsIfEmpty() {
   return { seeded: true, createdCount: created.length, count: created.length };
 }
 
-module.exports = { seedProductsIfEmpty, SEED_PRODUCTS };
-
+export { seedProductsIfEmpty, SEED_PRODUCTS };

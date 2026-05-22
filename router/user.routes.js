@@ -1,18 +1,16 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   register,
   getUsers,
   getUser,
-  editUser,
   deleteUser,
+  editUser,
   login,
   verifyUser,
   changePassword,
   forgotPassword,
   resetPassword,
-} = require("../controller/user.controller");
-
-
+} from "../controller/user.controller.js";
 
 const router = express.Router();
 
@@ -21,7 +19,6 @@ router.post("/register", register);
 
 // protected route
 router.get("/getUsers", verifyUser, getUsers);
-
 
 // get single user
 router.get("/getUser/:id", getUser);
@@ -42,5 +39,4 @@ router.patch("/changepassword", verifyUser, changePassword);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
-module.exports = router;
-
+export default router;
