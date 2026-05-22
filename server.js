@@ -9,8 +9,10 @@ import mongoose from "mongoose";
 import UserRouter from "./router/user.routes.js";
 import cartRoutes from "./router/cart.routes.js";
 import productRoutes from "./router/product.routes.js";
+import checkoutRoutes from "./router/checkout.routes.js";
 
 import { seedProductsIfEmpty } from "./seed/seedProducts.js";
+
 
 /* =========================
    DNS
@@ -117,6 +119,8 @@ seedProductsIfEmpty()
 app.use("/api/v1", UserRouter);
 app.use("/api/v1", cartRoutes);
 app.use("/api/v1", productRoutes);
+app.use("/api/v1", checkoutRoutes);
+
 
 /* =========================
    HEALTH CHECK
