@@ -148,17 +148,21 @@ router.post("/paystack/verify", verifyUser, async (req, res, next) => {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    // Create order
-    const orderId = `AV-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
+      // Create order
+      const orderId = `AV-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
 
-    const order = await OrderModel.create({
-      user: normalizeObjectId(userId),
-      orderId,
-      paymentReference: finalReference,
-      paymentStatus: "paid",
-      // IMPORTANT: Our frontend uses kobo. We store amount as kobo from Paystack if possible.
-      amount: Number(data.amount || total),
-      currency: data.currency || "NGN",
+      // Paystack returns amount in kobo.
+      // total from DB is in major currency units (based on your product.price), so we convert as a fallback.
+      const amountKobo =
+        data?.amount != null ? Number(data.amount) : Math.round(Number(total) * 100);
+
+      const order = await OrderModel.create({
+        user: normalizeObjectId(userId),
+        orderId,
+        paymentReference: finalReference,
+        paymentStatus: "paid",
+        amount: amountKobo,
+        currency: data.currency || "NGN",
       shipping: {
         fullName,
         email,
