@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import cors from "cors";
 import morgan from "morgan";
-import compression from "compression";
 import mongoose from "mongoose";
+import compression from "compression";
 
 import UserRouter from "./router/user.routes.js";
 import cartRoutes from "./router/cart.routes.js";
@@ -13,9 +13,7 @@ import productRoutes from "./router/product.routes.js";
 import checkoutRoutes from "./router/checkout.routes.js";
 import paymentRoutes from "./router/payment.routes.js";
 
-
 import { seedProductsIfEmpty } from "./seed/seedProducts.js";
-
 
 /* =========================
    DNS
@@ -52,11 +50,12 @@ const allowedOrigins = FRONTEND_ORIGINS.length > 0 ? FRONTEND_ORIGINS : DEFAULT_
    MIDDLEWARE ORDER:
    1. helmet (security headers)
    2. cors
-   3. morgan (logging)
-   4. express.json / urlencoded
-   5. routes
-   6. 404
-   7. error handler
+   3. compression
+   4. morgan (logging)
+   5. express.json / urlencoded
+   6. routes
+   7. 404
+   8. error handler
 ========================= */
 
 app.use(helmet());
@@ -76,12 +75,15 @@ app.use(
   })
 );
 
+// Compression: reduces payload size for JSON responses.
 app.use(
   compression({
     level: process.env.NODE_ENV === "production" ? 6 : 1,
     threshold: 1024,
+    // Express/Render typically supports gzip; brotli is handled by some proxies.
     filter: (req, res) => {
       const contentType = res.getHeader("Content-Type");
+      // Only compress if it's likely to be compressible.
       return !contentType || String(contentType).includes("json") || String(contentType).includes("text");
     },
   })
@@ -92,7 +94,7 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Prevent hanging requests
+// Basic request timeout to avoid hanging connections.
 app.use((req, res, next) => {
   res.setTimeout(15000, () => {
     if (!res.headersSent) {
@@ -110,7 +112,10 @@ const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL;
 if (MONGO_URI) {
   mongoose.set("strictQuery", true);
   mongoose
-    .connect(MONGO_URI)
+    .connect(MONGO_URI, {
+      // Keeps the connection reused across requests.
+      serverSelectionTimeoutMS: 10000,
+    })
     .then(() => console.log("Connected to MongoDB"))
     .catch((err) => {
       console.error("Mongo connect error", err);
@@ -146,8 +151,6 @@ app.use("/api/v1", productRoutes);
 app.use("/api/v1", checkoutRoutes);
 app.use("/api/v1", paymentRoutes);
 
-
-
 /* =========================
    HEALTH CHECK
 ========================= */
@@ -159,7 +162,6 @@ app.get("/", (req, res) => {
   });
 });
 
-// Serve OTP reset page
 app.get("/otp-reset", (req, res) => {
   res.sendFile("otp-reset.html", { root: process.cwd() });
 });
@@ -214,3 +216,4 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Backend listening on port ${PORT}`);
 });
+
