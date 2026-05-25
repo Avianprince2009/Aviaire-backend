@@ -1,10 +1,11 @@
 import express from "express";
-import { verifyUser } from "../controller/user.controller.js";
-import { checkout } from "../controller/checkout.controller.js";
+
+// Payment flow is Paystack-only.
+// The old /checkout endpoint was a fake/dummy flow.
+// Keep route removed to avoid mixed logic.
 
 const router = express.Router();
 
-router.post("/checkout", verifyUser, checkout);
-
 export default router;
+
 
