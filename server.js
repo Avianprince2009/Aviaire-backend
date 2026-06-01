@@ -12,10 +12,12 @@ import cartRoutes from "./router/cart.routes.js";
 import productRoutes from "./router/product.routes.js";
 import checkoutRoutes from "./router/checkout.routes.js";
 import paystackRoutes from "./router/paystack.routes.js";
+import contactRoutes from "./router/contact.routes.js";
 
 
 
 import { seedProductsIfEmpty } from "./seed/seedProducts.js";
+
 
 
 /* =========================
@@ -152,13 +154,15 @@ app.use("/api/v1", checkoutRoutes);
 console.log("[ROUTES] checkoutRoutes mounted at /api/v1");
 app.use("/api/v1/paystack", paystackRoutes);
 console.log("[ROUTES] Paystack routes loaded and mounted at /api/v1/paystack");
-
+app.use("/api/v1", contactRoutes);
+console.log("[ROUTES] contactRoutes mounted at /api/v1");
 
 
 
 /* =========================
    HEALTH CHECK
 ========================= */
+
 
 app.get("/", (req, res) => {
   res.json({
