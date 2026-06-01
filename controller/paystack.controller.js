@@ -89,6 +89,8 @@ async function verify(req, res, next) {
     const paystackSecret = getEnv("PAYSTACK_SECRET_KEY");
     if (!paystackSecret) return res.status(500).json({ success: false, message: "Paystack secret key is not configured" });
 
+    console.log('[paystack:verify] start', { userId, reference: ref });
+
     // Prevent duplicate verification creating duplicate orders
     const existing = await OrderModel.findOne({ paymentReference: ref });
     if (existing) {
@@ -100,11 +102,14 @@ async function verify(req, res, next) {
     const data = resp?.data?.data;
     if (!data) return res.status(502).json({ success: false, message: "Invalid response from Paystack" });
 
+    console.log('[paystack:verify] paystack verify result', { status: data.status, amount: data.amount, currency: data.currency, reference: ref });
+
     if (data.status !== "success") {
       return res.status(400).json({ success: false, message: "Payment not successful", paymentStatus: data.status });
     }
 
     // At this point payment is successful. Build order from user's cart.
+    console.log('[paystack:verify] loading cart for user', userId);
     const cart = await CartModel.findOne({ userId: normalizeObjectId(userId) }).populate("items.productId");
     const items = cart?.items || [];
     if (!items.length) return res.status(400).json({ success: false, message: "Cart is empty" });
@@ -156,8 +161,15 @@ async function verify(req, res, next) {
       orderDetails: { items: lineItems, total, placedAt: new Date() },
     });
 
+    console.log('[paystack:verify] order created', { orderId: order.orderId, userId, itemCount: lineItems.length, total });
+
     // Clear cart after successful order
-    await CartModel.findOneAndUpdate({ userId: normalizeObjectId(userId) }, { $set: { items: [] } });
+    const clearedCart = await CartModel.findOneAndUpdate(
+      { userId: normalizeObjectId(userId) },
+      { $set: { items: [] } },
+      { new: true }
+    );
+    console.log('[paystack:verify] cart cleared for user', userId, 'remainingItems', clearedCart?.items?.length ?? 'no-cart');
 
     return res.status(201).json({ success: true, message: "Payment verified and order saved", data: { orderId: order.orderId, placedAt: order.orderDetails?.placedAt, total, paymentReference: ref, paymentStatus: order.paymentStatus } });
   } catch (err) {
