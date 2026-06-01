@@ -145,7 +145,7 @@ app.use("/api/v1", UserRouter);
 app.use("/api/v1", cartRoutes);
 app.use("/api/v1", productRoutes);
 app.use("/api/v1", checkoutRoutes);
-app.use("/api/v1", paystackRoutes);
+app.use("/api/v1/paystack", paystackRoutes);
 
 
 
