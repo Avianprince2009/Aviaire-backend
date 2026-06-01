@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 import UserRouter from "./router/user.routes.js";
 import cartRoutes from "./router/cart.routes.js";
 import productRoutes from "./router/product.routes.js";
+import paystackRoutes from "./router/paystack.routes.js";
 
 import { seedProductsIfEmpty } from "./seed/seedProducts.js";
 
@@ -118,6 +119,7 @@ seedProductsIfEmpty()
 app.use("/api/v1", UserRouter);
 app.use("/api/v1", cartRoutes);
 app.use("/api/v1", productRoutes);
+app.use("/api/v1/paystack", paystackRoutes);
 
 /* =========================
    HEALTH CHECK
