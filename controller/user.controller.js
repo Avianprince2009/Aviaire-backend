@@ -376,9 +376,10 @@ const forgotPassword = async (req, res) => {
         const expiresInMinutes = 10;
         const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
 
+        // Ensure OTP always stored with string value; match check in resetPassword is String().
         await OtpModel.findOneAndUpdate(
             { email: normalizedEmail },
-            { otp, expiresAt },
+            { otp: String(otp), expiresAt },
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
