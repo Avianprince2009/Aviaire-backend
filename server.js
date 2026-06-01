@@ -142,12 +142,19 @@ seedProductsIfEmpty()
    ROUTES
 ========================= */
 
+console.log("[ROUTES] Registering routes...");
 app.use("/api/v1", UserRouter);
+console.log("[ROUTES] UserRouter mounted at /api/v1");
 app.use("/api/v1", cartRoutes);
+console.log("[ROUTES] cartRoutes mounted at /api/v1");
 app.use("/api/v1", productRoutes);
+console.log("[ROUTES] productRoutes mounted at /api/v1");
 app.use("/api/v1", checkoutRoutes);
+console.log("[ROUTES] checkoutRoutes mounted at /api/v1");
 app.use("/api/v1", paymentRoutes);
+console.log("[ROUTES] paymentRoutes mounted at /api/v1");
 app.use("/api/v1/paystack", paystackRoutes);
+console.log("[ROUTES] Paystack routes loaded and mounted at /api/v1/paystack");
 
 
 

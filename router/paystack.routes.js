@@ -7,6 +7,18 @@ import OrderModel from "../models/order.model.js";
 
 const router = express.Router();
 
+console.log("[Paystack Router Init] paystack.routes.js loaded");
+
+// Diagnostic endpoint - no auth required
+router.get("/test", (req, res) => {
+  console.log("[Paystack /test] GET request received");
+  res.json({
+    success: true,
+    message: "Paystack router is active",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 function getEnv(name, fallback = "") {
   const v = process.env[name];
   if (v == null) return fallback;
