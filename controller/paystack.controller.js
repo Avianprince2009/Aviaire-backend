@@ -47,15 +47,20 @@ async function initialize(req, res, next) {
     if (!paystackSecret) return res.status(500).json({ success: false, message: "Paystack secret key is not configured" });
 
     const reference = generateReference();
+    const frontendBase = getEnv('FRONTEND_URL') || req.headers.origin || '';
+    const callbackUrl = frontendBase ? `${frontendBase.replace(/\/$/, '')}/payment-success` : undefined;
 
     const initUrl = "https://api.paystack.co/transaction/initialize";
+    const payload = {
+      email: String(email).trim(),
+      amount: Number(rawAmountKobo),
+      reference,
+    };
+    if (callbackUrl) payload.callback_url = callbackUrl;
+
     const resp = await axios.post(
       initUrl,
-      {
-        email: String(email).trim(),
-        amount: Number(rawAmountKobo),
-        reference,
-      },
+      payload,
       {
         headers: {
           Authorization: `Bearer ${paystackSecret}`,
@@ -94,6 +99,13 @@ async function verify(req, res, next) {
     // Prevent duplicate verification creating duplicate orders
     const existing = await OrderModel.findOne({ paymentReference: ref });
     if (existing) {
+      console.log('[paystack:verify] existing order found for reference, clearing cart again', { userId, reference: ref });
+      const clearedCart = await CartModel.findOneAndUpdate(
+        { userId: normalizeObjectId(userId) },
+        { $set: { items: [] } },
+        { new: true }
+      );
+      console.log('[paystack:verify] cart cleared for existing order', { userId, remainingItems: clearedCart?.items?.length ?? 'no-cart' });
       return res.status(200).json({ success: true, message: "Order already exists for this reference", data: { orderId: existing.orderId } });
     }
 
