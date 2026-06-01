@@ -373,13 +373,15 @@ const forgotPassword = async (req, res) => {
             specialChars: false,
         });
 
+        const expiresInMinutes = 10;
+        const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
         await OtpModel.findOneAndUpdate(
             { email: normalizedEmail },
-            { otp },
+            { otp, expiresAt },
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
-        const expiresInMinutes = 10;
         const subject = "Password Reset Code";
         const text = `Your password reset code is: ${otp}\n\nIt will expire in ${expiresInMinutes} minutes.`;
 
@@ -426,9 +428,7 @@ const resetPassword = async (req, res) => {
             return res.status(400).json({ message: "Invalid or expired OTP" });
         }
 
-        const expiresInMs = 10 * 60 * 1000;
-        const createdAtMs = new Date(otpDoc.createdAt).getTime();
-        if (!Number.isFinite(createdAtMs) || Date.now() - createdAtMs > expiresInMs) {
+        if (!otpDoc.expiresAt || new Date() > otpDoc.expiresAt) {
             await OtpModel.deleteOne({ email: normalizedEmail });
             return res.status(400).json({ message: "Invalid or expired OTP" });
         }
