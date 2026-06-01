@@ -54,6 +54,100 @@ async function buildOrderFromCartAndShipping({ userId, shipping }) {
   return { lineItems, total };
 }
 
+// POST /api/v1/paystack/initialize
+// Body: { amountKobo, currency, reference, email }
+// Returns: { reference, authorizationUrl, accessCode }
+router.post("/paystack/initialize", verifyUser, async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    console.log("[paystack/initialize] Starting request for user:", userId);
+    
+    if (!userId) {
+      console.error("[paystack/initialize] No user ID in request");
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const {
+      amountKobo,
+      currency = "NGN",
+      reference,
+      email,
+    } = req.body || {};
+
+    console.log("[paystack/initialize] Request body:", { amountKobo, currency, reference, email });
+
+    if (amountKobo == null || !Number.isFinite(Number(amountKobo)) || Number(amountKobo) <= 0) {
+      console.error("[paystack/initialize] Invalid amountKobo:", amountKobo);
+      return res.status(400).json({ message: "amountKobo is required" });
+    }
+
+    const finalReference = String(reference || `AV-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`);
+
+    const paystackPublic = getEnv("PAYSTACK_PUBLIC_KEY");
+    const paystackSecret = getEnv("PAYSTACK_SECRET_KEY");
+
+    if (!paystackPublic) {
+      console.error("[paystack/initialize] PAYSTACK_PUBLIC_KEY is missing");
+      return res.status(500).json({ message: "Paystack public key is missing" });
+    }
+    if (!paystackSecret) {
+      console.error("[paystack/initialize] PAYSTACK_SECRET_KEY is missing");
+      return res.status(500).json({ message: "Paystack secret key is missing" });
+    }
+
+    const initUrl = "https://api.paystack.co/transaction/initialize";
+
+    console.log("[paystack/initialize] Calling Paystack API at:", initUrl);
+
+    const initResp = await axios.post(
+      initUrl,
+      {
+        email: email || "customer@example.com",
+        amount: Number(amountKobo),
+        reference: finalReference,
+        currency,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${paystackSecret}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        timeout: 15000,
+      }
+    );
+
+    const data = initResp?.data?.data;
+    console.log("[paystack/initialize] Paystack response:", { 
+      status: initResp?.status,
+      hasData: !!data,
+      authUrl: !!data?.authorization_url,
+      accessCode: !!data?.access_code 
+    });
+
+    if (!data?.authorization_url || !data?.access_code) {
+      console.error("[paystack/initialize] Invalid Paystack response - missing authorization_url or access_code");
+      return res.status(400).json({ message: "Invalid Paystack initialize response" });
+    }
+
+    console.log("[paystack/initialize] Success - returning auth URL and access code");
+    return res.status(201).json({
+      reference: finalReference,
+      authorizationUrl: data.authorization_url,
+      accessCode: data.access_code,
+      accessCodeForClient: data.access_code,
+    });
+  } catch (err) {
+    console.error("[paystack/initialize] Error:", {
+      message: err?.message,
+      status: err?.response?.status,
+      data: err?.response?.data,
+      stack: err?.stack
+    });
+    next(err);
+  }
+});
+
 // POST /api/v1/paystack/verify
 // Body: { reference, paymentReference? }
 router.post("/paystack/verify", verifyUser, async (req, res, next) => {
