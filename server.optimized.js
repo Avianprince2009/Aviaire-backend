@@ -12,6 +12,7 @@ import cartRoutes from "./router/cart.routes.js";
 import productRoutes from "./router/product.routes.js";
 import checkoutRoutes from "./router/checkout.routes.js";
 import paymentRoutes from "./router/payment.routes.js";
+import paystackRoutes from "./router/paystack.routes.js";
 
 import { seedProductsIfEmpty } from "./seed/seedProducts.js";
 
@@ -145,11 +146,19 @@ seedProductsIfEmpty()
    ROUTES
 ========================= */
 
+console.log("[ROUTES] Registering routes...");
 app.use("/api/v1", UserRouter);
+console.log("[ROUTES] UserRouter mounted at /api/v1");
 app.use("/api/v1", cartRoutes);
+console.log("[ROUTES] cartRoutes mounted at /api/v1");
 app.use("/api/v1", productRoutes);
+console.log("[ROUTES] productRoutes mounted at /api/v1");
 app.use("/api/v1", checkoutRoutes);
+console.log("[ROUTES] checkoutRoutes mounted at /api/v1");
 app.use("/api/v1", paymentRoutes);
+console.log("[ROUTES] paymentRoutes mounted at /api/v1");
+app.use("/api/v1/paystack", paystackRoutes);
+console.log("[ROUTES] Paystack routes loaded and mounted at /api/v1/paystack");
 
 /* =========================
    HEALTH CHECK
