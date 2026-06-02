@@ -84,14 +84,39 @@ async function getOrders(req, res, next) {
       ];
     }
 
+    // List endpoint should be lightweight: exclude orderDetails.items from payload.
+    // Full order (including items) remains available via GET /api/v1/orders/:id.
+    const listProjection = {
+      _id: 1,
+      orderId: 1,
+      amount: 1,
+      currency: 1,
+      orderStatusSystem: 1,
+      orderStatus: 1,
+      paymentStatus: 1,
+      "shipping.fullName": 1,
+      "shipping.email": 1,
+      "shipping.phone": 1,
+      "shipping.address1": 1,
+      "shipping.city": 1,
+      "shipping.country": 1,
+      "shipping.postalCode": 1,
+      "orderDetails.total": 1,
+      "orderDetails.placedAt": 1,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+
     const [totalCount, orders] = await Promise.all([
       OrderModel.countDocuments(match),
       OrderModel.find(match)
         .sort(buildOrderSort(sortBy))
         .skip(skip)
         .limit(limNum)
+        .select(listProjection)
         .lean(),
     ]);
+
 
     return res.status(200).json({
       message: "Orders fetched successfully",

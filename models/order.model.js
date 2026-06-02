@@ -64,10 +64,22 @@ const OrderSchema = new mongoose.Schema(
       placedAt: { type: Date, default: Date.now },
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
+// Orders admin list is filtered by orderStatusSystem and optionally searched via shipping fields,
+// and sorted by createdAt / orderDetails.total / orderDetails.placedAt.
+// Composite indexes significantly reduce collection scans + in-memory sorts.
+OrderSchema.index({ orderStatusSystem: 1, createdAt: -1 });
+OrderSchema.index({ createdAt: -1 });
+OrderSchema.index({ "orderDetails.total": -1, createdAt: -1 });
+OrderSchema.index({ "orderDetails.placedAt": -1, createdAt: -1 });
 
 export default mongoose.model("Order", OrderSchema);
+
+
+
 
 
