@@ -169,9 +169,12 @@ async function verify(req, res, next) {
       paymentStatus: "paid",
       amount: amountKobo,
       currency: data.currency || "NGN",
+      orderStatusSystem: "pending",
+      orderStatus: "Pending",
       shipping,
       orderDetails: { items: lineItems, total, placedAt: new Date() },
     });
+
 
     console.log('[paystack:verify] order created', { orderId: order.orderId, userId, itemCount: lineItems.length, total });
 

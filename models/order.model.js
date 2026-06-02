@@ -32,6 +32,22 @@ const OrderSchema = new mongoose.Schema(
 
     currency: { type: String, default: "NGN" },
 
+    orderStatusSystem: {
+      // internal string for admins (display-ready)
+      type: String,
+      default: "pending",
+      enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+      index: true,
+    },
+
+    orderStatus: {
+      // display label, kept in sync with orderStatusSystem
+      type: String,
+      default: "Pending",
+      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      index: true,
+    },
+
     shipping: {
       fullName: { type: String, required: true, trim: true },
       email: { type: String, required: true, trim: true },
@@ -50,6 +66,7 @@ const OrderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 
 export default mongoose.model("Order", OrderSchema);
 

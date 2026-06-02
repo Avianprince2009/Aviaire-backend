@@ -10,8 +10,10 @@ import UserRouter from "./router/user.routes.js";
 import cartRoutes from "./router/cart.routes.js";
 import productRoutes from "./router/product.routes.js";
 import paystackRoutes from "./router/paystack.routes.js";
+import orderRoutes from "./router/order.routes.js";
 
 import { seedProductsIfEmpty } from "./seed/seedProducts.js";
+
 
 /* =========================
    DNS
@@ -120,6 +122,8 @@ app.use("/api/v1", UserRouter);
 app.use("/api/v1", cartRoutes);
 app.use("/api/v1", productRoutes);
 app.use("/api/v1/paystack", paystackRoutes);
+app.use("/api/v1", orderRoutes);
+
 
 /* =========================
    HEALTH CHECK
