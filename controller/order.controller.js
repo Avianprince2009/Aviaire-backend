@@ -100,7 +100,6 @@ async function getOrders(req, res, next) {
       "shipping.address1": 1,
       "shipping.city": 1,
       "shipping.country": 1,
-      "shipping.postalCode": 1,
       "orderDetails.total": 1,
       "orderDetails.placedAt": 1,
       createdAt: 1,

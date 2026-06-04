@@ -36,7 +36,7 @@ async function initialize(req, res, next) {
       return res.status(400).json({ success: false, message: "shippingInfo is required" });
     }
 
-    const requiredShippingFields = ["fullName", "email", "address1", "city", "country", "postalCode"];
+    const requiredShippingFields = ["fullName", "email", "address1", "city", "country"];
     for (const field of requiredShippingFields) {
       if (!String(shippingInfo[field] || "").trim()) {
         return res.status(400).json({ success: false, message: `${field} is required in shippingInfo` });
@@ -151,11 +151,10 @@ async function verify(req, res, next) {
       address1: String(shippingFromBody.address1 || "").trim(),
       city: String(shippingFromBody.city || "").trim(),
       country: String(shippingFromBody.country || "").trim(),
-      postalCode: String(shippingFromBody.postalCode || shippingFromBody.zip || "").trim(),
     };
 
     // Basic validation of shipping
-    const required = ["fullName", "email", "address1", "city", "country", "postalCode"];
+    const required = ["fullName", "email", "address1", "city", "country"];
     for (const k of required) {
       if (!String(shipping[k] || "").trim()) {
         return res.status(400).json({ success: false, message: `${k} is required` });

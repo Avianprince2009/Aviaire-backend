@@ -20,7 +20,6 @@ const checkout = async (req, res, next) => {
       address1,
       city,
       country,
-      postalCode,
       paymentMethod,
     } = req.body || {};
 
@@ -30,7 +29,6 @@ const checkout = async (req, res, next) => {
       address1,
       city,
       country,
-      postalCode,
     };
 
     for (const [k, v] of Object.entries(required)) {
@@ -104,7 +102,6 @@ const checkout = async (req, res, next) => {
           address1,
           city,
           country,
-          postalCode,
         },
         items: lineItems,
       },
