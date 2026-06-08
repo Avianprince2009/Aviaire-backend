@@ -19,7 +19,7 @@ const OrderSchema = new mongoose.Schema(
 
     orderId: { type: String, required: true, unique: true, index: true },
 
-    paymentReference: { type: String, index: true, default: "" },
+    paymentReference: { type: String, index: true, unique: true, default: "" },
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],

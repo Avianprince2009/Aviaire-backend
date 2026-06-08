@@ -96,19 +96,6 @@ async function verify(req, res, next) {
 
     console.log('[paystack:verify] start', { userId, reference: ref });
 
-    // Prevent duplicate verification creating duplicate orders
-    const existing = await OrderModel.findOne({ paymentReference: ref });
-    if (existing) {
-      console.log('[paystack:verify] existing order found for reference, clearing cart again', { userId, reference: ref });
-      const clearedCart = await CartModel.findOneAndUpdate(
-        { userId: normalizeObjectId(userId) },
-        { $set: { items: [] } },
-        { new: true }
-      );
-      console.log('[paystack:verify] cart cleared for existing order', { userId, remainingItems: clearedCart?.items?.length ?? 'no-cart' });
-      return res.status(200).json({ success: true, message: "Order already exists for this reference", data: { orderId: existing.orderId } });
-    }
-
     const verifyUrl = `https://api.paystack.co/transaction/verify/${encodeURIComponent(ref)}`;
     const resp = await axios.get(verifyUrl, { headers: { Authorization: `Bearer ${paystackSecret}` }, timeout: 15000 });
     const data = resp?.data?.data;
@@ -121,6 +108,9 @@ async function verify(req, res, next) {
     }
 
     // At this point payment is successful. Build order from user's cart.
+    // IMPORTANT: `paymentReference` is now unique, so concurrent requests will either:
+    // - create one order successfully, or
+    // - fail on unique constraint and we then re-fetch the existing order.
     console.log('[paystack:verify] loading cart for user', userId);
     const cart = await CartModel.findOne({ userId: normalizeObjectId(userId) }).populate("items.productId");
     const items = cart?.items || [];
@@ -139,11 +129,13 @@ async function verify(req, res, next) {
 
     if (!lineItems.length) return res.status(400).json({ success: false, message: "Cart has invalid items" });
 
-    const orderId = `AV-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
     const amountKobo = Number(data.amount != null ? data.amount : Math.round(total * 100));
+
+    const orderId = `AV-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
 
     // Shipping info: try to use metadata if provided by Paystack else request body
     const shippingFromBody = req.body.shippingInfo || req.body || {};
+
     const shipping = {
       fullName: String(shippingFromBody.fullName || shippingFromBody.name || data?.customer?.first_name || "").trim(),
       email: String(shippingFromBody.email || data?.customer?.email || "").trim(),
@@ -161,21 +153,33 @@ async function verify(req, res, next) {
       }
     }
 
-    const order = await OrderModel.create({
-      user: normalizeObjectId(userId),
-      orderId,
-      paymentReference: ref,
-      paymentStatus: "paid",
-      amount: amountKobo,
-      currency: data.currency || "NGN",
-      orderStatusSystem: "pending",
-      orderStatus: "Pending",
-      shipping,
-      orderDetails: { items: lineItems, total, placedAt: new Date() },
-    });
+    let order;
+    try {
+      order = await OrderModel.create({
+        user: normalizeObjectId(userId),
+        orderId,
+        paymentReference: ref,
+        paymentStatus: "paid",
+        amount: amountKobo,
+        currency: data.currency || "NGN",
+        orderStatusSystem: "pending",
+        orderStatus: "Pending",
+        shipping,
+        orderDetails: { items: lineItems, total, placedAt: new Date() },
+      });
+    } catch (e) {
+      // Unique constraint violation likely means a concurrent verify already created the order.
+      // Re-fetch and treat as success (idempotent).
+      if (e?.code === 11000) {
+        order = await OrderModel.findOne({ paymentReference: ref }).lean();
+        if (!order) throw e;
+      } else {
+        throw e;
+      }
+    }
 
+    console.log('[paystack:verify] order created/confirmed', { orderId: order?.orderId, userId, itemCount: lineItems.length, total });
 
-    console.log('[paystack:verify] order created', { orderId: order.orderId, userId, itemCount: lineItems.length, total });
 
     // Clear cart after successful order
     const clearedCart = await CartModel.findOneAndUpdate(
